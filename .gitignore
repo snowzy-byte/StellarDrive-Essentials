@@ -1,6 +1,14 @@
 /*
 !/.gitignore
+!/LICENSE.md
 !/README.md
+!/mod.json
+!/StellarDriveEssentials/
+/StellarDriveEssentials/*
+!/StellarDriveEssentials/StellarDriveEssentialsMod/
+/StellarDriveEssentials/StellarDriveEssentialsMod/*
+!/StellarDriveEssentials/StellarDriveEssentialsMod/*.cs
+/StellarDriveEssentials/StellarDriveEssentialsMod/FlightNoclip.cs
 
 **/bin/
 **/obj/
@@ -17,3 +25,18 @@
 *.user
 *.suo
 *.log
+*.tmp
+*.bak
+*.zip
+*.obj
+*.blend
+*.blend1
+*.fbx
+*.gltf
+*.glb
+*.stl
+.env
+.env.*
+*.pem
+*.key
+*.pfx

@@ -1,0 +1,17 @@
+{
+  "id": "StellarDriveEssentials_Mod",
+  "name": "StellarDrive Essentials",
+  "author": "Ghost",
+  "version": "1.0.3",
+  "description": "StellarDrive Essentials adds shipbuilding and automation parts: a distance sensor, an altimeter, a long-range LIDAR, a Signal Timer, a Signal Delay, a signal transmitter that links circuits between ships, signal-controlled doors with half-block placement, and a speed HUD for the pilot seats. The parts unlock through research and the mod registers them on its own, without SDModKit.",
+  "ai": "ai-assisted",
+  "development": "active",
+  "tags": [
+    "sensor",
+    "lidar",
+    "timer",
+    "delay",
+    "signal",
+    "automation"
+  ]
+}
