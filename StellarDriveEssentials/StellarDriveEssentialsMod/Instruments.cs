@@ -28,10 +28,8 @@ internal static class Instruments
     internal const string BuildTab = "Essentials";
     private static readonly HashSet<ResearchSettings> Researches = new HashSet<ResearchSettings>();
     private static bool _registeringResearch;
-    private static Action<string> _log;
     internal static void Install(HarmonyLib.Harmony harmony, Action<string> log)
     {
-        _log = log;
         SocketAnchors.Install(harmony);
         EssentialsParts.Register(new EssentialsPartDefinition { Id = DistanceId, Name = "EssentialsDistanceSensor", Donor = "VelocitySensor", BuildRow = 0, Configure = (settings, prefab) => Configure(settings, prefab, false) });
         EssentialsParts.Register(new EssentialsPartDefinition { Id = AltimeterId, Name = "EssentialsAltimeter", Donor = "VelocitySensor", BuildRow = 0, Configure = (settings, prefab) => Configure(settings, prefab, true) });
@@ -212,10 +210,8 @@ internal static class LidarSensor
     private static Mesh _mesh;
     private static Mesh _laser;
     private static Material[] _materials;
-    private static Action<string> _log;
     internal static void Register(HarmonyLib.Harmony harmony, Action<string> log)
     {
-        _log = log;
         harmony.Patch(AccessTools.Method(typeof(ShipStatefulColliders), "GenerateStatefulCollider"), postfix: new HarmonyMethod(typeof(LidarSensor), nameof(AfterColliderGenerated)));
         EssentialsParts.Register(new EssentialsPartDefinition { Id = PartId, Name = "EssentialsLidarSensor", Donor = "VelocitySensor", BuildRow = 0, Configure = Configure });
     }

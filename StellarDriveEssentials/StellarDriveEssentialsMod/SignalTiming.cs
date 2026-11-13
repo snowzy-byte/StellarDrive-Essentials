@@ -331,11 +331,10 @@ internal static class TimerAppearance
     private static float _topSurfaceY;
     private static readonly Vector3 BodyCenter = new Vector3(0f, .215f, 0f);
     private static readonly Vector3 BodySize = new Vector3(.258f, .43f, .258f);
-    internal static void Configure(PartSettings settings, GameObject prefab) => Configure(settings, prefab, false);
-    internal static void Configure(PartSettings settings, GameObject prefab, bool delay)
+    internal static void Configure(PartSettings settings, GameObject prefab)
     {
-        settings.fullLabel = delay ? "Signal Delay" : "Signal Timer";
-        settings.description = delay ? "Repeats every change from IN at OUT after a delay, including short pulses and zero. TIME sets the delay in seconds; leave it unplugged for 5 seconds. Changing TIME or reloading the save clears pending signals." : "Passes IN to OUT immediately, then holds the last nonzero value when IN returns to zero. TIME sets the hold duration in seconds; leave it unplugged for 5 seconds. A new signal refreshes the timer.";
+        settings.fullLabel = "Signal Timer";
+        settings.description = "Passes IN to OUT immediately, then holds the last nonzero value when IN returns to zero. TIME sets the hold duration in seconds; leave it unplugged for 5 seconds. A new signal refreshes the timer.";
         settings.localizedDescription = null;
         settings.internalStateClass = nameof(MathGateState);
         settings.customCreationClass = string.Empty;
@@ -370,7 +369,6 @@ internal static class TimerAppearance
             UnityEngine.Object.DestroyImmediate(arrow.gameObject);
         UnityEngine.Object.DestroyImmediate((MonoBehaviour)original);
         TimerReadoutVisuals visuals = root.AddComponent<TimerReadoutVisuals>();
-        visuals.IsDelay = delay;
         CreateDisplayWindow(root);
         visuals.Screen = Instruments.CreateLabel(root, "TimerCountdown", "0.0 s", new Vector3(0f, _topSurfaceY + .0011f, 0f), Quaternion.Euler(90f, 0f, 0f), .0036f);
         TMP_FontAsset font = Resources.FindObjectsOfTypeAll<TMP_FontAsset>().FirstOrDefault(f => f && f.name == "LiberationSans SDF");
