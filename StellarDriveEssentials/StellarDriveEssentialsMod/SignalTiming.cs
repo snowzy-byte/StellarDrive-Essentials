@@ -335,7 +335,7 @@ internal static class TimerAppearance
     internal static void Configure(PartSettings settings, GameObject prefab, bool delay)
     {
         settings.fullLabel = delay ? "Signal Delay" : "Signal Timer";
-        settings.description = delay ? "IN: signal to delay. TIME: delay in seconds (0 to 86400); connect a Constant, or leave unplugged for 5 s. OUT: replays every input change after that delay, including short pulses, negative values and zero. Changing TIME restarts the delay and clears pending changes. Pending changes reset on pickup or save reload." : "IN: signal to hold. TIME: hold duration in seconds (0 to 86400); connect a Constant, or leave unplugged for 5 s. OUT: follows IN immediately and keeps its last nonzero value for the set time after IN turns off. A new signal refreshes the hold. Running countdowns reset when reloading the save.";
+        settings.description = delay ? "Repeats every change from IN at OUT after a delay, including short pulses and zero. TIME sets the delay in seconds; leave it unplugged for 5 seconds. Changing TIME or reloading the save clears pending signals." : "Passes IN to OUT immediately, then holds the last nonzero value when IN returns to zero. TIME sets the hold duration in seconds; leave it unplugged for 5 seconds. A new signal refreshes the timer.";
         settings.localizedDescription = null;
         settings.internalStateClass = nameof(MathGateState);
         settings.customCreationClass = string.Empty;
@@ -643,7 +643,7 @@ internal static class DelayAppearance
     internal static void Configure(PartSettings settings, GameObject prefab)
     {
         settings.fullLabel = "Signal Delay";
-        settings.description = "IN: signal to delay. TIME: delay in seconds (0 to 86400); connect a Constant, or leave unplugged for 5 s. OUT: replays every input change after that delay, including short pulses, negative values and zero. Changing TIME restarts the delay and clears pending changes. Pending changes reset on pickup or save reload. On queue overload output stops; change TIME or pick up the part to reset.";
+        settings.description = "Repeats every change from IN at OUT after a delay, including short pulses and zero. TIME sets the delay in seconds; leave it unplugged for 5 seconds. Changing TIME or reloading the save clears pending signals.";
         settings.localizedDescription = null;
         settings.internalStateClass = nameof(MathGateState);
         settings.customCreationClass = string.Empty;

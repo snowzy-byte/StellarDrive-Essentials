@@ -40,7 +40,7 @@ internal static class IntershipSignals
     private static void Configure(PartSettings settings, GameObject prefab)
     {
         settings.fullLabel = "Intership Signal Transmitter";
-        settings.description = "Wireless signal link between ships. Place one on each ship, enter the same channel and connect signal cables to their sockets. The socket sends and receives; multiple units can share a channel. Channel names are case-sensitive; a blank channel disables the link. No added distance limit between tracked ships. Conflicting signals use the game's normal largest-magnitude rule.";
+        settings.description = "Sends and receives signals between ships using the same channel. Place a transmitter on each ship and connect its signal socket. Channel names are case-sensitive; leave the channel empty to disable the link.";
         settings.localizedDescription = null;
         settings.internalStateClass = nameof(SignalTransmitterState);
         settings.customCreationClass = string.Empty;

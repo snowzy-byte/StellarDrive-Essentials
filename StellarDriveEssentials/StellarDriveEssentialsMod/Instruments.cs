@@ -47,7 +47,7 @@ internal static class Instruments
     private static void Configure(PartSettings settings, GameObject prefab, bool altitude)
     {
         settings.fullLabel = altitude ? "Altimeter" : "Distance Sensor";
-        settings.description = altitude ? "Altitude above the planet's sea-level reference radius, rounded to the nearest whole meter on the display and output socket. Updates 10 times per second. Display -- / output -1 when unavailable." : "Distance along the arrow, up to 10 km, rounded to whole meters. Detects loaded obstacles and this ship's blocks, ignoring the sensor itself. Planet terrain also uses the native height field beyond collider loading distance, without loading more meshes. Point the arrow toward the target; sky or a missed target outputs -1. Updates 10 times per second.";
+        settings.description = altitude ? "Measures altitude above the planet's sea level and sends the value in whole meters. Returns -1 when no reading is available." : "Measures distance in the arrow's direction, up to 10 km. Detects terrain, ships and other obstacles. Sends the distance in whole meters, or -1 when no target is found.";
         settings.localizedDescription = null;
         settings.internalStateClass = nameof(ConstantState);
         settings.customCreationClass = string.Empty;
@@ -232,7 +232,7 @@ internal static class LidarSensor
     private static void Configure(PartSettings settings, GameObject prefab)
     {
         settings.fullLabel = "LIDAR Sensor";
-        settings.description = "Long-range distance sensor, up to 1000 km straight ahead from the lens along the red laser. OUT: whole meters. ENABLE: connect a positive signal to scan; zero, negative or no cable turns it off. Disabled or no hit outputs -1. Uses native planet terrain beyond collider range; other objects require loaded colliders. Updates 10 times per second.";
+        settings.description = "Measures distance along the laser, up to 1,000 km. Connect a positive signal to ENABLE to start scanning. OUT sends whole meters, or -1 when disabled or no target is found.";
         settings.localizedDescription = null;
         settings.internalStateClass = nameof(ConstantState);
         settings.customCreationClass = string.Empty;
