@@ -40,3 +40,7 @@
 *.pem
 *.key
 *.pfx
+
+!/images/
+/images/*
+!/images/stellardrive-essentials-cover.png
