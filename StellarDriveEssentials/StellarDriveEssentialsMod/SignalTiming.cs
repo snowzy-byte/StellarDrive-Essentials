@@ -318,9 +318,10 @@ internal sealed class SignalLag
 
 internal static class TimerAppearance
 {
-    private const float LayoutScale = .65f;
+    internal const float ModelHeight = .428f;
+    internal const float BodyHalfWidth = .129f;
+    internal const float CornerBevel = .034f;
     private const float SocketScale = .45f;
-    private const float BaseLift = .038f;
     private static Mesh _mesh;
     private static Material[] _materials;
     private static Material _screenMaterial;
@@ -329,7 +330,7 @@ internal static class TimerAppearance
     private static float _socketApothem;
     private static float _topSurfaceY;
     private static readonly Vector3 BodyCenter = new Vector3(0f, .215f, 0f);
-    private static readonly Vector3 BodySize = new Vector3(.278f, .43f, .278f);
+    private static readonly Vector3 BodySize = new Vector3(.258f, .43f, .258f);
     internal static void Configure(PartSettings settings, GameObject prefab) => Configure(settings, prefab, false);
     internal static void Configure(PartSettings settings, GameObject prefab, bool delay)
     {
@@ -354,6 +355,13 @@ internal static class TimerAppearance
             throw new MissingMemberException("The timer donor mesh is unavailable.");
         EnsureMeshAndMaterials(body.GetComponent<MeshRenderer>().sharedMaterial);
         TimerColliders.EnsureMesh(_socketApothem, BodySize.y);
+        prefab.transform.localScale = Vector3.one;
+        root.transform.localPosition = Vector3.zero;
+        root.transform.localRotation = Quaternion.identity;
+        root.transform.localScale = Vector3.one;
+        body.transform.localPosition = Vector3.zero;
+        body.transform.localRotation = Quaternion.identity;
+        body.transform.localScale = Vector3.one;
         body.name = "Hourglass";
         body.sharedMesh = _mesh;
         body.GetComponent<MeshRenderer>().sharedMaterials = _materials;
@@ -389,7 +397,7 @@ internal static class TimerAppearance
             throw new MissingMemberException("The timer donor signal socket has changed.");
         SocketObject donor = sockets[0];
         Vector3 visualScale = donor.visualObject.transform.localScale * SocketScale;
-        Vector3 interactionScale = donor.interactive.transform.localScale * SocketScale;
+        Vector3 interactionScale = donor.interactive.transform.localScale * .65f;
         string[] names =
         {
             "IN",
@@ -403,8 +411,8 @@ internal static class TimerAppearance
             AccessTools.Field(typeof(SocketObject), "relayedSockets").SetValue(socket, Array.Empty<SocketObject>());
             socket.name = names[index];
             Quaternion socketRotation = Quaternion.Euler(0f, (1 - index) * 45f, 0f);
-            Vector3 outward = socketRotation * Vector3.back;
-            socket.transform.localPosition = outward * (_socketApothem + .001f) + Vector3.up * .040f;
+            double[] position = SocketPosition(index);
+            socket.transform.localPosition = new Vector3((float)position[0], (float)position[1], (float)position[2]);
             socket.transform.localRotation = socketRotation;
             socket.visualObject.transform.localScale = visualScale;
             socket.interactive.transform.localScale = interactionScale;
@@ -423,6 +431,14 @@ internal static class TimerAppearance
         }
     }
 
+    internal static double[] SocketPosition(byte index)
+    {
+        if (index > 2) throw new ArgumentOutOfRangeException(nameof(index));
+        double angle = (1 - index) * Math.PI / 4d;
+        double face = index == 1 ? BodyHalfWidth : (2d * BodyHalfWidth - CornerBevel) / Math.Sqrt(2d);
+        return new[] { -Math.Sin(angle) * (face + .001d), .040d, -Math.Cos(angle) * (face + .001d) };
+    }
+
     private static void EnsureMeshAndMaterials(Material opaque)
     {
         if (_mesh && _materials != null)
@@ -435,20 +451,12 @@ internal static class TimerAppearance
         if (!_mesh || _mesh.subMeshCount != 4 || _mesh.bounds.size.y <= 0f)
             throw new InvalidDataException("The supplied hourglass must contain four material groups.");
         Bounds bounds = _mesh.bounds;
-        float scale = .6f * LayoutScale / bounds.size.y;
-        float bandBottom = (.5f - bounds.min.y) * scale;
-        float bandTop = (2f - bounds.min.y) * scale;
-        _socketApothem = bounds.extents.z * scale;
-        _topSurfaceY = (30f - bounds.min.y) * scale + BaseLift;
+        if (Math.Abs(bounds.size.y - ModelHeight) > .0005f || Math.Abs(bounds.size.x - BodyHalfWidth * 2f) > .0005f
+            || Math.Abs(bounds.size.z - BodyHalfWidth * 2f) > .0005f || Math.Abs(bounds.min.y) > .0005f)
+            throw new InvalidDataException("Timer OBJ must use its approved meter dimensions.");
+        _socketApothem = bounds.extents.z;
+        _topSurfaceY = bounds.max.y;
         Vector3[] vertices = _mesh.vertices;
-        for (int i = 0; i < vertices.Length; i++)
-        {
-            Vector3 vertex = new Vector3(vertices[i].x - bounds.center.x, vertices[i].y - bounds.min.y, vertices[i].z - bounds.center.z) * scale;
-            vertex.y += BaseLift * Mathf.Clamp01((vertex.y - bandBottom) / (bandTop - bandBottom));
-            vertices[i] = vertex;
-        }
-
-        _mesh.vertices = vertices;
         var colors = new Color[vertices.Length];
         for (int i = 0; i < colors.Length; i++)
             colors[i] = Color.white;
@@ -975,23 +983,13 @@ internal static class TimerColliders
     internal static double[][] GetHullVertices(double apothem, double height)
     {
         var vertices = new double[16][];
-        double radius = apothem / Math.Cos(Math.PI / 8d);
+        double inner = apothem - TimerAppearance.CornerBevel;
+        double[] x = { apothem, inner, -inner, -apothem, -apothem, -inner, inner, apothem };
+        double[] z = { inner, apothem, apothem, inner, -inner, -apothem, -apothem, -inner };
         for (int i = 0; i < 8; i++)
         {
-            double angle = Math.PI / 8d + i * Math.PI / 4d;
-            double x = Math.Cos(angle) * radius, z = Math.Sin(angle) * radius;
-            vertices[i] = new[]
-            {
-                x,
-                0d,
-                z
-            };
-            vertices[i + 8] = new[]
-            {
-                x,
-                height,
-                z
-            };
+            vertices[i] = new[] { x[i], 0d, z[i] };
+            vertices[i + 8] = new[] { x[i], height, z[i] };
         }
 
         return vertices;

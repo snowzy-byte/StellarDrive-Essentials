@@ -199,11 +199,15 @@ internal static class LidarSensor
 {
     internal const ushort PartId = 8906;
     internal const double DisabledReading = -double.MaxValue / 2d;
-    internal const float Height = .30f;
-    internal const float LayoutReduction = Height / .45f;
-    internal const float Scale = Height / 20.8f;
+    internal const float Height = .222f;
+    internal const float LayoutReduction = .30f / .45f;
+    internal const float Scale = .30f / 20.8f;
+    internal const float SocketVisualScale = .65f;
+    internal const float SocketInteractionScale = .85f;
     internal static Vector3 RayOrigin => new Vector3(0f, 3.5f * Scale, 12.7f * Scale);
     internal static Vector3 RayDirection => Vector3.forward;
+    internal static Vector3 SocketPosition(byte id) => new Vector3(id == 0 ? -.07666667f : .07666667f, .05552885f, -.149f);
+    internal static Vector3 ReadoutPosition => new Vector3(0f, .104f, .121f);
 
     private static Mesh _mesh;
     private static Mesh _laser;
@@ -264,7 +268,7 @@ internal static class LidarSensor
         SensorReadoutVisuals visual = root.AddComponent<SensorReadoutVisuals>();
         visual.IsLidar = true;
         visual.ActivityVisual = laser;
-        visual.Screen = Instruments.CreateLabel(root, "LidarReading", "LIDAR\nOFF", new Vector3(0f, 7.1f * Scale, 8.8f * Scale), Quaternion.Euler(90f, 0f, 0f), .0038f * LayoutReduction);
+        visual.Screen = Instruments.CreateLabel(root, "LidarReading", "LIDAR\nOFF", ReadoutPosition, Quaternion.Euler(90f, 0f, 0f), .0038f * LayoutReduction);
         visual.Screen.color = Color.white;
         visual.Screen.fontStyle = FontStyles.Normal;
         visual.Screen.fontSizeMax = 12f;
@@ -272,7 +276,7 @@ internal static class LidarSensor
         visual.Screen.rectTransform.anchorMin = visual.Screen.rectTransform.anchorMax = new Vector2(.5f, .5f);
         visual.Screen.rectTransform.pivot = new Vector2(.5f, .5f);
         visual.Screen.rectTransform.anchoredPosition = Vector2.zero;
-        visual.Screen.rectTransform.sizeDelta = new Vector2(72f, 22f);
+        visual.Screen.rectTransform.sizeDelta = new Vector2(54f, 17f);
         ShipPartBounds bounds = prefab.GetComponent<ShipPartBounds>();
         bounds.center = _mesh.bounds.center;
         bounds.bounds = _mesh.bounds.size;
@@ -281,15 +285,15 @@ internal static class LidarSensor
         if (sockets.Length != 1 || sockets[0].Id != 0 || sockets[0].Type != CableType.Signal)
             throw new MissingMemberException("LIDAR donor socket layout changed.");
         SocketObject donor = sockets[0];
-        Vector3 visualScale = donor.visualObject.transform.localScale * (.45f * LayoutReduction);
-        Vector3 interactiveScale = donor.interactive.transform.localScale * (.45f * LayoutReduction);
+        Vector3 visualScale = donor.visualObject.transform.localScale * SocketVisualScale;
+        Vector3 interactiveScale = donor.interactive.transform.localScale * SocketInteractionScale;
         for (byte id = 0; id < 2; id++)
         {
             SocketObject socket = id == 0 ? donor : UnityEngine.Object.Instantiate(donor.gameObject, donor.transform.parent, false).GetComponent<SocketObject>();
             AccessTools.Field(typeof(SocketObject), "id").SetValue(socket, id);
             AccessTools.Field(typeof(SocketObject), "relayedSockets").SetValue(socket, Array.Empty<SocketObject>());
             socket.name = id == 0 ? "OUT" : "ENABLE";
-            socket.transform.localPosition = new Vector3((id == 0 ? -.115f : .115f) * LayoutReduction, 3.85f * Scale, -10f * Scale - .0015f * LayoutReduction);
+            socket.transform.localPosition = SocketPosition(id);
             socket.transform.localRotation = Quaternion.identity;
             socket.visualObject.transform.localScale = visualScale;
             socket.interactive.transform.localScale = interactiveScale;
@@ -314,10 +318,10 @@ internal static class LidarSensor
             return;
         using (Stream stream = typeof(LidarSensor).Assembly.GetManifestResourceStream("StellarDriveEssentials.Lidar.Model.obj"))
         using (var reader = new StreamReader(stream ?? throw new MissingManifestResourceException("LIDAR model is missing.")))
-            _mesh = ObjModel.FromObj(reader.ReadToEnd(), "Essentials_StylizedLidar");
+            _mesh = ObjModel.FromObj(reader.ReadToEnd(), "Essentials_CylindricalLidar");
         if (!_mesh || _mesh.subMeshCount != 6)
             throw new InvalidDataException("LIDAR OBJ material groups changed.");
-        if (Math.Abs(_mesh.bounds.size.y - Height) > .0005f || _mesh.bounds.size.x > Height * 1.2f || _mesh.bounds.size.z > Height * 1.6f)
+        if (Math.Abs(_mesh.bounds.size.y - Height) > .0005f || _mesh.bounds.size.x > .301f || _mesh.bounds.size.z > .340f || Math.Abs(_mesh.bounds.min.y) > .0005f)
             throw new InvalidDataException("LIDAR mesh is outside its compact meter-scale dimensions.");
         Vector3[] vertices = _mesh.vertices;
         var colors = new Color[vertices.Length];
@@ -340,13 +344,12 @@ internal static class LidarSensor
         };
         _laser.RecalculateBounds();
         _mesh.SetTriangles(Array.Empty<int>(), 4);
-        Material glass = Resources.FindObjectsOfTypeAll<Material>().FirstOrDefault(m => m && m.name == "DockingDoorGlass");
         _materials = new[]
         {
-            TimerAppearance.MakeMaterial(donor, "LidarMetal", new Color(.70f, .75f, .79f), .4f, .55f),
+            TimerAppearance.MakeMaterial(donor, "LidarMetal", new Color(.58f, .66f, .71f), .4f, .55f),
             TimerAppearance.MakeMaterial(donor, "LidarChassis", new Color(.12f, .19f, .23f), .1f, .8f),
             TimerAppearance.MakeMaterial(donor, "LidarOptics", new Color(.025f, .035f, .045f), 0f, .8f),
-            TimerAppearance.MakeMaterial(glass ? glass : donor, "LidarGlass", new Color(.24f, .76f, .85f, .3f), 0f, .15f),
+            TimerAppearance.MakeMaterial(donor, "LidarGlass", new Color(.16f, .40f, .46f), 0f, .25f),
             TimerAppearance.MakeMaterial(donor, "LidarLaser", new Color(1f, .06f, .08f), 0f, .4f),
             TimerAppearance.MakeMaterial(donor, "LidarBolts", new Color(.85f, .88f, .9f), .6f, .45f)
         };
@@ -381,42 +384,10 @@ internal static class LidarSensor
 
     internal static double[][] CollisionBoxes() => new[]
     {
-        new[]
-        {
-            0d,
-            .775d * Scale,
-            .8d * Scale,
-            24.8d * Scale,
-            1.55d * Scale,
-            23.2d * Scale
-        },
-        new[]
-        {
-            0d,
-            3.85d * Scale,
-            .9d * Scale,
-            23.2d * Scale,
-            6d * Scale,
-            21.8d * Scale
-        },
-        new[]
-        {
-            0d,
-            14.2d * Scale,
-            -1.2d * Scale,
-            17.2d * Scale,
-            13.2d * Scale,
-            18.4d * Scale
-        },
-        new[]
-        {
-            0d,
-            3.5d * Scale,
-            12.25d * Scale,
-            2d * Scale,
-            2d * Scale,
-            .7d * Scale
-        }
+        new[] { 0d, .014d, .007d, .30d, .028d, .326d },
+        new[] { 0d, .064d, .006d, .282d, .072d, .306d },
+        new[] { 0d, .161d, -.035d, .188d, .122d, .188d },
+        new[] { 0d, .05048d, .17075d, .030d, .030d, .024d }
     };
     internal static void Release()
     {

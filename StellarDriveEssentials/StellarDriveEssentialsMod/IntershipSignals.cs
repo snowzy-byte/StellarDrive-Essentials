@@ -18,6 +18,7 @@ using System.IO;
 using System.Resources;
 using Players.Utils;
 using Ships.Physics.Collision;
+using TMPro;
 
 namespace StellarDriveEssentials;
 internal static class IntershipSignals
@@ -223,9 +224,14 @@ internal sealed class WirelessRelayGraph
 
 internal static class AntennaAppearance
 {
-    internal const float ModelHeight = 1f;
-    internal const float BaseLift = .06f;
-    internal const float SourceHeight = 36.76522f;
+    internal const float ModelHeight = .5f;
+    internal const float SocketVisualScale = .65f;
+    internal const float SocketInteractionScale = .85f;
+    internal const float ChannelCanvasScale = .005f;
+    internal const double InteractionPadding = .006d;
+    internal static Vector2 ChannelRectSize => new Vector2(28f, 7f);
+    internal static Vector3 SocketPosition => new Vector3(0f, .07f, -.1015f);
+    internal static Vector3 ChannelPosition => new Vector3(0f, .17714286f, -.1155f);
     private static Mesh _mesh;
     private static Material[] _materials;
     internal static void Install(HarmonyLib.Harmony harmony) => harmony.Patch(AccessTools.Method(typeof(ShipStatefulColliders), "GenerateStatefulCollider"), postfix: new HarmonyMethod(typeof(AntennaAppearance), nameof(AfterColliderGenerated)));
@@ -236,6 +242,13 @@ internal static class AntennaAppearance
         if (!body)
             throw new MissingMemberException("The native transmitter mesh is unavailable.");
         EnsureMesh(body.GetComponent<MeshRenderer>().sharedMaterial);
+        prefab.transform.localScale = Vector3.one;
+        visual.transform.localPosition = Vector3.zero;
+        visual.transform.localRotation = Quaternion.identity;
+        visual.transform.localScale = Vector3.one;
+        body.transform.localPosition = Vector3.zero;
+        body.transform.localRotation = Quaternion.identity;
+        body.transform.localScale = Vector3.one;
         body.name = "EssentialsAntenna";
         body.sharedMesh = _mesh;
         body.GetComponent<MeshRenderer>().sharedMaterials = _materials;
@@ -245,11 +258,10 @@ internal static class AntennaAppearance
         settings.size = _mesh.bounds.size;
         settings.mass = 1f;
         SocketObject socket = prefab.GetComponentInChildren<SocketObject>(true);
-        float scale = ModelHeight / SourceHeight;
-        socket.transform.localPosition = new Vector3(0f, .039f, -2.6f * scale - .0015f);
+        socket.transform.localPosition = SocketPosition;
         socket.transform.localRotation = Quaternion.identity;
-        socket.visualObject.transform.localScale *= .45f;
-        socket.interactive.transform.localScale *= .45f;
+        socket.visualObject.transform.localScale *= SocketVisualScale;
+        socket.interactive.transform.localScale *= SocketInteractionScale;
         foreach (SphereCollider sphere in socket.interactive.GetComponentsInChildren<SphereCollider>(true))
             sphere.radius = .075f;
         Transform canvas = visual.transform.Find("Canvas");
@@ -257,9 +269,57 @@ internal static class AntennaAppearance
         {
             foreach (LookAtPlayerFlat2Sides aligner in canvas.GetComponents<LookAtPlayerFlat2Sides>())
                 UnityEngine.Object.DestroyImmediate(aligner);
-            canvas.localPosition = new Vector3(0f, .15f, -.084f);
+            RectTransform panel = canvas as RectTransform;
+            if (!panel || !visual.InputField)
+                throw new MissingMemberException("The native channel input layout is unavailable.");
+            panel.anchorMin = panel.anchorMax = panel.pivot = new Vector2(.5f, .5f);
+            panel.sizeDelta = ChannelRectSize;
+            panel.anchoredPosition3D = Vector3.zero;
+            canvas.localScale = Vector3.one * ChannelCanvasScale;
             canvas.localRotation = Quaternion.identity;
-            canvas.localScale *= .6f;
+            canvas.localPosition = ChannelPosition;
+            TMP_InputField input = visual.InputField;
+            input.lineType = TMP_InputField.LineType.SingleLine;
+            input.pointSize = 5f;
+            RectTransform field = input.GetComponent<RectTransform>();
+            field.anchorMin = Vector2.zero;
+            field.anchorMax = Vector2.one;
+            field.pivot = new Vector2(.5f, .5f);
+            field.offsetMin = field.offsetMax = Vector2.zero;
+            field.anchoredPosition3D = Vector3.zero;
+            field.localRotation = Quaternion.identity;
+            field.localScale = Vector3.one;
+            RectTransform viewport = input.textViewport;
+            if (viewport)
+            {
+                viewport.anchorMin = Vector2.zero;
+                viewport.anchorMax = Vector2.one;
+                viewport.pivot = new Vector2(.5f, .5f);
+                viewport.offsetMin = new Vector2(1f, .35f);
+                viewport.offsetMax = new Vector2(-1f, -.35f);
+                viewport.localRotation = Quaternion.identity;
+                viewport.localScale = Vector3.one;
+            }
+            foreach (TMP_Text text in canvas.GetComponentsInChildren<TMP_Text>(true))
+            {
+                RectTransform rect = text.rectTransform;
+                rect.anchorMin = Vector2.zero;
+                rect.anchorMax = Vector2.one;
+                rect.pivot = new Vector2(.5f, .5f);
+                rect.offsetMin = rect.offsetMax = Vector2.zero;
+                rect.anchoredPosition3D = Vector3.zero;
+                rect.localRotation = Quaternion.identity;
+                rect.localScale = Vector3.one;
+                text.enableAutoSizing = true;
+                text.fontSizeMin = 2f;
+                text.fontSizeMax = 5f;
+                text.fontSize = 5f;
+                text.fontStyle = FontStyles.Normal;
+                text.alignment = TextAlignmentOptions.Center;
+                text.margin = Vector4.zero;
+                text.richText = false;
+                text.color = Color.white;
+            }
         }
 
         foreach (PartInteraction interaction in prefab.GetComponentsInChildren<PartInteraction>(true))
@@ -269,7 +329,9 @@ internal static class AntennaAppearance
             if (!box)
                 continue;
             box.transform.localPosition = Vector3.zero;
-            ConfigureColliders(box);
+            box.transform.localRotation = Quaternion.identity;
+            box.transform.localScale = Vector3.one;
+            ConfigureColliders(box, true);
         }
     }
 
@@ -279,18 +341,10 @@ internal static class AntennaAppearance
             return;
         using (Stream stream = typeof(AntennaAppearance).Assembly.GetManifestResourceStream("StellarDriveEssentials.Transmitter.Antenna.obj"))
         using (var reader = new StreamReader(stream ?? throw new MissingManifestResourceException("The antenna OBJ is missing.")))
-            _mesh = ObjModel.FromObj(reader.ReadToEnd(), "Essentials_StylizedAntenna");
-        if (!_mesh || _mesh.subMeshCount != 4 || Math.Abs(_mesh.bounds.size.y - SourceHeight) > .001f)
+            _mesh = ObjModel.FromObj(reader.ReadToEnd(), "Essentials_ParabolicAntenna50cm");
+        if (!_mesh || _mesh.subMeshCount != 4 || Math.Abs(_mesh.bounds.size.y - ModelHeight) > .0005f || _mesh.bounds.size.x > .273f || _mesh.bounds.size.z > .266f || Math.Abs(_mesh.bounds.min.y) > .0005f)
             throw new InvalidDataException("The antenna model's dimensions or material groups changed.");
         Vector3[] vertices = _mesh.vertices;
-        for (int i = 0; i < vertices.Length; i++)
-        {
-            Vector3 v = vertices[i];
-            double[] point = TransformPoint(v.x, v.y, v.z);
-            vertices[i] = new Vector3((float)point[0], (float)point[1], (float)point[2]);
-        }
-
-        _mesh.vertices = vertices;
         var colors = new Color[vertices.Length];
         for (int i = 0; i < colors.Length; i++)
             colors[i] = Color.white;
@@ -301,21 +355,10 @@ internal static class AntennaAppearance
         _mesh.hideFlags = HideFlags.DontUnloadUnusedAsset;
         _materials = new[]
         {
-            TimerAppearance.MakeMaterial(donor, "AntennaLightMetal", new Color(.70f, .75f, .79f), .45f, .5f),
-            TimerAppearance.MakeMaterial(donor, "AntennaBrightMetal", new Color(.83f, .86f, .88f), .6f, .4f),
+            TimerAppearance.MakeMaterial(donor, "AntennaLightMetal", new Color(.58f, .66f, .71f), .45f, .5f),
+            TimerAppearance.MakeMaterial(donor, "AntennaBrightMetal", new Color(.70f, .77f, .81f), .6f, .4f),
             TimerAppearance.MakeMaterial(donor, "AntennaJunctionBoxes", new Color(.13f, .20f, .24f), .1f, .8f),
             TimerAppearance.MakeMaterial(donor, "AntennaInk", new Color(.035f, .045f, .055f), 0f, 1f)
-        };
-    }
-
-    internal static double[] TransformPoint(double x, double y, double z)
-    {
-        double scale = ModelHeight / (double)SourceHeight;
-        return new[]
-        {
-            x * scale,
-            y * scale + BaseLift * Math.Max(0d, Math.Min(1d, y / .7d)),
-            z * scale
         };
     }
 
@@ -326,11 +369,11 @@ internal static class AntennaAppearance
         ConfigureColliders(__result.GetComponent<BoxCollider>());
     }
 
-    private static void ConfigureColliders(BoxCollider original)
+    private static void ConfigureColliders(BoxCollider original, bool interaction = false)
     {
         if (!original)
             return;
-        double[][] boxes = CollisionBoxes();
+        double[][] boxes = interaction ? InteractionBoxes() : CollisionBoxes();
         for (int i = 0; i < boxes.Length; i++)
         {
             BoxCollider box = i == 0 ? original : original.gameObject.AddComponent<BoxCollider>();
@@ -346,58 +389,31 @@ internal static class AntennaAppearance
         }
     }
 
-    internal static double[][] CollisionBoxes()
+    internal static double[][] InteractionBoxes()
     {
-        double s = ModelHeight / (double)SourceHeight;
-        return new[]
+        double[][] physical = CollisionBoxes();
+        var boxes = new double[physical.Length + 1][];
+        for (int i = 0; i < physical.Length; i++)
         {
-            new[]
-            {
-                0d,
-                (.7d * s + BaseLift) * .5d,
-                0d,
-                5.2d * s,
-                .7d * s + BaseLift,
-                5.2d * s
-            },
-            new[]
-            {
-                0d,
-                17.6d * s + BaseLift,
-                0d,
-                .96d * s,
-                34.4d * s,
-                .84d * s
-            },
-            new[]
-            {
-                0d,
-                13.646465d * s + BaseLift,
-                .12222d * s,
-                34.4d * s,
-                5.60405d * s,
-                7.35556d * s
-            },
-            new[]
-            {
-                0d,
-                21.95d * s + BaseLift,
-                0d,
-                13.6d * s,
-                9.0244d * s,
-                3.546d * s
-            },
-            new[]
-            {
-                0d,
-                31.78261d * s + BaseLift,
-                2.9d * s,
-                7.7697d * s,
-                9.96522d * s,
-                10.8182d * s
-            }
-        };
+            double[] b = physical[i];
+            boxes[i] = new[] { b[0], b[1], b[2], b[3] + 2d * InteractionPadding, b[4] + 2d * InteractionPadding, b[5] + 2d * InteractionPadding };
+        }
+        boxes[physical.Length] = new[] { 0d, .17714286d, -.1165d, .15d, .05d, .012d };
+        return boxes;
     }
+
+    internal static double[][] CollisionBoxes() => new[]
+    {
+        new[] { 0d, .017142857d, 0d, .228571429d, .034285714d, .228571429d },
+        new[] { 0d, .071428571d, 0d, .2d, .108571429d, .199d },
+        new[] { 0d, .177142857d, 0d, .18d, .102857143d, .222857143d },
+        new[] { 0d, .289285714d, .014285714d, .037142857d, .121428571d, .037142857d },
+        new[] { 0d, .35d, .028571429d, .14d, .031428571d, .04d },
+        new[] { 0d, .364285714d, .074285714d, .27d, .17d, .045714286d },
+        new[] { 0d, .253785714d, .074285714d, .18d, .051d, .045714286d },
+        new[] { 0d, .474785714d, .074285714d, .18d, .051d, .045714286d },
+        new[] { 0d, .364285714d, .137857143d, .027142857d, .027142857d, .027142857d }
+    };
 
     internal static void Release()
     {
